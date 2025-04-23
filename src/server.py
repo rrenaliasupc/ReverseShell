@@ -37,7 +37,8 @@ class ReverseShell:
         self.master.title("Reverse Shell Controller") #Set window title
         
         # Create a scrolled text area for displaying output
-        self.output_area = scrolledtext.ScrolledText(self.master, wrap=tk.WORD, width=80, height=20, state='disabled')
+        self.output_area = scrolledtext.ScrolledText(self.master, wrap=tk.WORD, state='disabled')
+        self.output_area.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         self.output_area.pack(padx=10, pady=10)
 
         # Create a text entry for the command input
