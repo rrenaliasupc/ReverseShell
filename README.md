@@ -7,14 +7,14 @@ ML and Cybersecurity for Internet-Connected Devices MSc.*
 ## Overview
 
 This repository contains an implementation of a ReverseShell viewed in class but with some improvements:
--
--
--
+- Return system information of the clien on connection
+- Allow to work in different bash types in case in windows (cmd, powershell and wsl) it they are installed
+- Allow multiple clients connected to the server. A new UI based in tabs allows to manage it
+- Minnnor UI improvements
 
 ## Repository distribution
 
 The files are structured as follows:
-- In `doc` you will find the report and theirs sources.
 - In `src` you will find the source code for the client and server part.
 
 ## Run the demo
